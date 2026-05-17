@@ -6,9 +6,9 @@ import '../../providers/assinaturas_provider.dart';
 
 class EditarAssinaturaPage extends StatefulWidget {
   final Assinatura assinatura;
-  final String token;
+  final String userId;
   const EditarAssinaturaPage(
-      {super.key, required this.assinatura, required this.token});
+      {super.key, required this.assinatura, required this.userId});
 
   @override
   State<EditarAssinaturaPage> createState() => _EditarAssinaturaPageState();
@@ -49,7 +49,7 @@ class _EditarAssinaturaPageState extends State<EditarAssinaturaPage> {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<AssinaturasProvider>();
     final ok = await prov.editar(
-      token: widget.token,
+      userId: widget.userId,
       id: widget.assinatura.id,
       campos: {
         'nome': _nomeCtrl.text.trim(),

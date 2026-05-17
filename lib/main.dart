@@ -5,10 +5,21 @@ import 'providers/auth_provider.dart';
 import 'providers/assinaturas_provider.dart';
 import 'screens/auth/login_page.dart';
 
+
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa o Firebase antes de rodar o app
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MeuGestorApp());
 }
+
 
 class MeuGestorApp extends StatelessWidget {
   const MeuGestorApp({super.key});

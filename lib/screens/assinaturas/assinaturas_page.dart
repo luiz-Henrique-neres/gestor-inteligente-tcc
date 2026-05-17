@@ -6,13 +6,18 @@ import '../../providers/auth_provider.dart';
 import '../../providers/assinaturas_provider.dart';
 import 'editar_assinatura_page.dart';
 
-class AssinaturasPage extends StatelessWidget {
+class AssinaturasPage extends StatefulWidget {
   const AssinaturasPage({super.key});
 
   @override
+  State<AssinaturasPage> createState() => _AssinaturasPageState();
+}
+
+class _AssinaturasPageState extends State<AssinaturasPage> {
+  @override
   Widget build(BuildContext context) {
     final prov = context.watch<AssinaturasProvider>();
-    final token = context.read<AuthProvider>().token ?? '';
+    final userId = context.read<AuthProvider>().firebaseUser?.uid ?? '';
 
     if (prov.carregando) {
       return const Center(child: CircularProgressIndicator());
@@ -40,7 +45,7 @@ class AssinaturasPage extends StatelessWidget {
       itemCount: prov.assinaturas.length,
       itemBuilder: (context, i) {
         final a = prov.assinaturas[i];
-        return _CardAssinatura(assinatura: a, token: token);
+        return _CardAssinatura(assinatura: a, userId: userId);
       },
     );
   }
@@ -48,9 +53,9 @@ class AssinaturasPage extends StatelessWidget {
 
 class _CardAssinatura extends StatelessWidget {
   final Assinatura assinatura;
-  final String token;
+  final String userId;
 
-  const _CardAssinatura({required this.assinatura, required this.token});
+  const _CardAssinatura({required this.assinatura, required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +86,7 @@ class _CardAssinatura extends StatelessWidget {
                     children: [
                       Text(assinatura.nome,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
+                              fontWeight: FontWeight.w600, fontSize: 16)),
                       Text(assinatura.categoria,
                           style: const TextStyle(
                               color: AppTheme.textoSecundario, fontSize: 13)),
@@ -129,7 +134,7 @@ class _CardAssinatura extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => EditarAssinaturaPage(
-                            assinatura: assinatura, token: token),
+                            assinatura: assinatura, userId: userId),
                       ),
                     ),
                     icon: const Icon(Icons.edit_outlined, size: 18),
@@ -195,7 +200,7 @@ class _CardAssinatura extends StatelessWidget {
               Navigator.pop(context);
               final ok = await context
                   .read<AssinaturasProvider>()
-                  .deletar(token, assinatura.id);
+                  .deletar(userId, assinatura.id);
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

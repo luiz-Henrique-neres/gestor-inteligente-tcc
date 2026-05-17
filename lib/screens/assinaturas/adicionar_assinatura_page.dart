@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app_theme.dart';
 import '../../providers/assinaturas_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class AdicionarAssinaturaPage extends StatefulWidget {
   final String token;
@@ -29,8 +30,9 @@ class _AdicionarAssinaturaPageState extends State<AdicionarAssinaturaPage> {
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<AssinaturasProvider>();
+    final userId = widget.token;
     final ok = await prov.criar(
-      token: widget.token,
+      userId: userId,
       nome: _nomeCtrl.text.trim(),
       categoria: _categoriaSelecionada,
       valor: double.parse(_valorCtrl.text.replaceAll(',', '.')),

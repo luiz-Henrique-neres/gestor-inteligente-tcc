@@ -3,7 +3,7 @@ class Assinatura {
   final String nome;
   final String categoria;
   final double valor;
-  final String vencimento;
+  final String vencimento;            
   final bool ativa;
 
   Assinatura({

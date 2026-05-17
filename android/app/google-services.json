@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "592823190621",
+    "project_id": "gestor-financeiro-b7118",
+    "storage_bucket": "gestor-financeiro-b7118.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:592823190621:android:79702bd6f42337405479b4",
+        "android_client_info": {
+          "package_name": "com.example.gestor_assinaturas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRp40xTzBrVZSK5PpduVWxh2RCCjBCVuc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
