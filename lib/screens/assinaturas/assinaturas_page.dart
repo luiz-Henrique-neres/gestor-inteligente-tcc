@@ -198,9 +198,11 @@ class _CardAssinatura extends StatelessWidget {
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.erro),
             onPressed: () async {
               Navigator.pop(context);
+              final auth = context.read<AuthProvider>();
+              final token = await auth.idToken ?? '';
               final ok = await context
                   .read<AssinaturasProvider>()
-                  .deletar(userId, assinatura.id);
+                  .deletar(userId, token, assinatura.id);
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

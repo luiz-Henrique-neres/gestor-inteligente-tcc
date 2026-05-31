@@ -25,10 +25,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _carregar() async {
-    final token = context.read<AuthProvider>().token ?? '';
+    final auth = context.read<AuthProvider>();
+    final token = await auth.idToken ?? '';
+    final userId = auth.usuario?.id ?? '';
     final prov = context.read<AssinaturasProvider>();
-    await prov.carregarDashboard(token);
-    await prov.carregarAssinaturas(token);
+    await prov.carregarDashboard(userId, token);
+    await prov.carregarAssinaturas(userId, token);
   }
 
   @override
@@ -59,7 +61,7 @@ class _DashboardPageState extends State<DashboardPage> {
               backgroundColor: AppTheme.primario,
               foregroundColor: Colors.white,
               onPressed: () async {
-                final token = context.read<AuthProvider>().token ?? '';
+                final token = await context.read<AuthProvider>().idToken ?? '';
                 await Navigator.push(
                   context,
                   MaterialPageRoute(

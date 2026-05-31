@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import firebase_auth
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/usuario.dart';
-// import '../services/api_service.dart'; // ApiService no longer needed for auth
 
 class AuthProvider extends ChangeNotifier {
-  User? _firebaseUser; // Renamed to _firebaseUser
-  Usuario? _usuario; // This will store our custom Usuario model
+  User? _firebaseUser;
+  Usuario? _usuario;
   bool _carregando = false;
   String? _erro;
 
@@ -15,7 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool get carregando => _carregando;
   String? get erro => _erro;
   bool get autenticado => _firebaseUser != null;
-  String? get token => _firebaseUser?.uid; // Adicionado getter para o token
+  Future<String?>? get idToken => _firebaseUser?.getIdToken();
 
   AuthProvider() {
     _firebaseUser = FirebaseAuth.instance.currentUser;
@@ -25,7 +24,7 @@ class AuthProvider extends ChangeNotifier {
         id: user.uid,
         email: user.email!,
         nome: user.displayName ?? user.email!.split('@')[0],
-        telefone: '', // Placeholder as Firebase Auth doesn't provide it directly
+        telefone: '', 
       ) : null;
       notifyListeners();
     });
@@ -49,7 +48,16 @@ class AuthProvider extends ChangeNotifier {
         nome: _firebaseUser!.displayName ?? _firebaseUser!.email!.split('@')[0],
         telefone: '',
       ) : null;
-      await _salvarToken(_firebaseUser!.uid); // Using UID as a token for persistence
+      
+      final String? idToken = await _firebaseUser!.getIdToken();
+      await _salvarToken(idToken); 
+
+      // 👇 ADICIONADO AQUI: Salvando email e senha localmente para o requisito
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('salvou_email', email);
+      await prefs.setString('salvou_senha', senha);
+      // 👆 FIM DA ADIÇÃO
+
       return true;
     } on FirebaseAuthException catch (e) {
       _erro = _getFirebaseAuthErrorMessage(e.code);
@@ -68,7 +76,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> cadastro({
     required String nome,
     required String email,
-    required String telefone, // Telefone will not be directly used by Firebase Auth
+    required String telefone, 
     required String senha,
     required String confirmarSenha,
   }) async {
@@ -84,15 +92,16 @@ class AuthProvider extends ChangeNotifier {
       if (_firebaseUser != null) {
         await _firebaseUser!.updateDisplayName(nome);
         await _firebaseUser!.reload();
-        _firebaseUser = FirebaseAuth.instance.currentUser; // Get updated user
+        _firebaseUser = FirebaseAuth.instance.currentUser; 
       }
       _usuario = _firebaseUser != null ? Usuario(
         id: _firebaseUser!.uid,
         email: _firebaseUser!.email!,
         nome: _firebaseUser!.displayName ?? _firebaseUser!.email!.split('@')[0],
-        telefone: telefone, // Keep telefone for our custom Usuario model
+        telefone: telefone, 
       ) : null;
-      await _salvarToken(_firebaseUser!.uid);
+      final String? idToken = await _firebaseUser!.getIdToken();
+      await _salvarToken(idToken);
       return true;
     } on FirebaseAuthException catch (e) {
       _erro = _getFirebaseAuthErrorMessage(e.code);
@@ -114,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _erro = 'Link de redefinição de senha enviado para $email.'; // Sucesso
+      _erro = 'Link de redefinição de senha enviado para $email.'; 
       return true;
     } on FirebaseAuthException catch (e) {
       _erro = _getFirebaseAuthErrorMessage(e.code);
@@ -135,26 +144,34 @@ class AuthProvider extends ChangeNotifier {
     _firebaseUser = null;
     _usuario = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token'); // Assuming 'token' was used to store UID
+    await prefs.remove('token'); 
+
+    // 👇 ADICIONADO AQUI: Limpando as credenciais ao sair
+    await prefs.remove('salvou_email');
+    await prefs.remove('salvou_senha');
+    // 👆 FIM DA ADIÇÃO
+
     notifyListeners();
   }
 
   // ─── Persistência ───────────────────────────────────────────────────────────
 
-  Future<void> _salvarToken(String uid) async {
+  Future<void> _salvarToken(String? token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', uid);
+    if (token != null) {
+      await prefs.setString('token', token);
+    } else {
+      await prefs.remove('token');
+    }
   }
 
   Future<void> carregarSessao() async {
-    // FirebaseAuth automatically handles session persistence
-    // We can just ensure _firebaseUser and _usuario are up-to-date
     _firebaseUser = FirebaseAuth.instance.currentUser;
     _usuario = _firebaseUser != null ? Usuario(
       id: _firebaseUser!.uid,
       email: _firebaseUser!.email!,
       nome: _firebaseUser!.displayName ?? _firebaseUser!.email!.split('@')[0],
-      telefone: '', // Default or retrieve from Firestore if stored separately
+      telefone: '', 
     ) : null;
     notifyListeners();
   }

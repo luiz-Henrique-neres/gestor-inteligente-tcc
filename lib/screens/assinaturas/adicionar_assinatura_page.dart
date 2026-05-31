@@ -30,9 +30,14 @@ class _AdicionarAssinaturaPageState extends State<AdicionarAssinaturaPage> {
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<AssinaturasProvider>();
-    final userId = widget.token;
+    final auth = context.read<AuthProvider>();
+    
+    // O token vem do AuthProvider ou pode ser passado via widget
+    final token = await auth.idToken ?? widget.token;
+
     final ok = await prov.criar(
-      userId: userId,
+      token: token,
+      userId: auth.usuario?.id ?? '',
       nome: _nomeCtrl.text.trim(),
       categoria: _categoriaSelecionada,
       valor: double.parse(_valorCtrl.text.replaceAll(',', '.')),

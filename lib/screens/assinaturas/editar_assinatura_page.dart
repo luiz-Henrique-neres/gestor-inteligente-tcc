@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../app_theme.dart';
 import '../../models/assinatura.dart';
 import '../../providers/assinaturas_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class EditarAssinaturaPage extends StatefulWidget {
   final Assinatura assinatura;
@@ -48,8 +49,11 @@ class _EditarAssinaturaPageState extends State<EditarAssinaturaPage> {
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<AssinaturasProvider>();
+    final auth = context.read<AuthProvider>();
+    final token = await auth.idToken ?? '';
     final ok = await prov.editar(
       userId: widget.userId,
+      token: token,
       id: widget.assinatura.id,
       campos: {
         'nome': _nomeCtrl.text.trim(),

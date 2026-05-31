@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/assinatura.dart';
-import '../services/api_service.dart';
 
 class AssinaturasProvider extends ChangeNotifier {
   List<Assinatura> _assinaturas = [];
@@ -20,28 +20,92 @@ class AssinaturasProvider extends ChangeNotifier {
 
   // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-  Future<void> carregarDashboard(String userId) async {
+  Future<void> carregarDashboard(String userId, String token) async {
+    _carregando = true;
+    _erro = null;
+    notifyListeners();
     try {
-      _dashboard = await ApiService.getDashboard(userId);
-      notifyListeners();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('assinaturas')
+          .where('usuario_id', isEqualTo: userId)
+          .get();
+
+      final todasAssinaturas = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Assinatura(
+          id: doc.id,
+          nome: data['nome'] ?? '',
+          categoria: data['categoria'] ?? '',
+          valor: (data['valor'] as num?)?.toDouble() ?? 0.0,
+          vencimento: data['vencimento'] ?? '',
+          ativa: data['ativa'] ?? true,
+        );
+      }).toList();
+
+      final ativasList = todasAssinaturas.where((a) => a.ativa).toList();
+      final gastoMensal = ativasList.fold<double>(0.0, (acumulado, a) => acumulado + a.valor);
+
+      final proximas = List<Assinatura>.from(ativasList);
+      proximas.sort((a, b) {
+        final diaA = int.tryParse(a.vencimento) ?? 999;
+        final diaB = int.tryParse(b.vencimento) ?? 999;
+        if (diaA != 999 && diaB != 999) {
+          return diaA.compareTo(diaB);
+        }
+        return a.vencimento.compareTo(b.vencimento);
+      });
+
+      final proximosVencimentos = proximas.take(3).map((a) => {
+        'id': a.id,
+        'nome': a.nome,
+        'categoria': a.categoria,
+        'valor': a.valor,
+        'vencimento': a.vencimento,
+        'ativa': a.ativa,
+      }).toList();
+
+      _dashboard = {
+        "gasto_mensal": gastoMensal,
+        "gasto_anual": gastoMensal * 12,
+        "total_ativas": ativasList.length,
+        "proximos_vencimentos": proximosVencimentos,
+      };
+      _assinaturas = todasAssinaturas;
+      _assinaturasController.add(_assinaturas);
     } catch (e) {
-      _erro = e.toString().replaceAll('Exception: ', '');
+      _erro = e.toString();
+    } finally {
+      _carregando = false;
       notifyListeners();
     }
   }
 
   // ─── Listar ─────────────────────────────────────────────────────────────────
 
-  Future<void> carregarAssinaturas(String userId) async {
+  Future<void> carregarAssinaturas(String userId, String token) async {
     _carregando = true;
     _erro = null;
     notifyListeners();
     try {
-      final lista = await ApiService.getAssinaturas(userId);
-      _assinaturas = lista.map((j) => Assinatura.fromJson(j)).toList();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('assinaturas')
+          .where('usuario_id', isEqualTo: userId)
+          .get();
+
+      _assinaturas = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Assinatura(
+          id: doc.id,
+          nome: data['nome'] ?? '',
+          categoria: data['categoria'] ?? '',
+          valor: (data['valor'] as num?)?.toDouble() ?? 0.0,
+          vencimento: data['vencimento'] ?? '',
+          ativa: data['ativa'] ?? true,
+        );
+      }).toList();
       _assinaturasController.add(_assinaturas);
     } catch (e) {
-      _erro = e.toString().replaceAll('Exception: ', '');
+      _erro = e.toString();
     } finally {
       _carregando = false;
       notifyListeners();
@@ -51,6 +115,7 @@ class AssinaturasProvider extends ChangeNotifier {
   // ─── Criar ──────────────────────────────────────────────────────────────────
 
   Future<bool> criar({
+    required String token,
     required String userId,
     required String nome,
     required String categoria,
@@ -58,19 +123,30 @@ class AssinaturasProvider extends ChangeNotifier {
     required String vencimento,
   }) async {
     try {
-      final data = await ApiService.criarAssinatura(
-        userId: userId,
+      final docRef = await FirebaseFirestore.instance.collection('assinaturas').add({
+        'nome': nome,
+        'categoria': categoria,
+        'valor': valor,
+        'vencimento': vencimento,
+        'ativa': true,
+        'usuario_id': userId,
+      });
+
+      final novaAssinatura = Assinatura(
+        id: docRef.id,
         nome: nome,
         categoria: categoria,
         valor: valor,
         vencimento: vencimento,
+        ativa: true,
       );
-      _assinaturas.add(Assinatura.fromJson(data));
+
+      _assinaturas.add(novaAssinatura);
       _assinaturasController.add(_assinaturas);
       notifyListeners();
       return true;
     } catch (e) {
-      _erro = e.toString().replaceAll('Exception: ', '');
+      _erro = e.toString();
       notifyListeners();
       return false;
     }
@@ -80,24 +156,33 @@ class AssinaturasProvider extends ChangeNotifier {
 
   Future<bool> editar({
     required String userId,
+    required String token,
     required String id,
     required Map<String, dynamic> campos,
   }) async {
     try {
-      final data = await ApiService.editarAssinatura(
-        userId: userId,
-        id: id,
-        campos: campos,
-      );
+      await FirebaseFirestore.instance
+          .collection('assinaturas')
+          .doc(id)
+          .update(campos);
+
       final idx = _assinaturas.indexWhere((a) => a.id == id);
       if (idx != -1) {
-        _assinaturas[idx] = Assinatura.fromJson(data);
+        final antiga = _assinaturas[idx];
+        _assinaturas[idx] = Assinatura(
+          id: id,
+          nome: campos['nome'] ?? antiga.nome,
+          categoria: campos['categoria'] ?? antiga.categoria,
+          valor: campos['valor'] != null ? (campos['valor'] as num).toDouble() : antiga.valor,
+          vencimento: campos['vencimento'] ?? antiga.vencimento,
+          ativa: campos['ativa'] ?? antiga.ativa,
+        );
         _assinaturasController.add(_assinaturas);
       }
       notifyListeners();
       return true;
     } catch (e) {
-      _erro = e.toString().replaceAll('Exception: ', '');
+      _erro = e.toString();
       notifyListeners();
       return false;
     }
@@ -105,15 +190,19 @@ class AssinaturasProvider extends ChangeNotifier {
 
   // ─── Deletar ─────────────────────────────────────────────────────────────────
 
-  Future<bool> deletar(String userId, String id) async {
+  Future<bool> deletar(String userId, String token, String id) async {
     try {
-      await ApiService.deletarAssinatura(userId, id);
+      await FirebaseFirestore.instance
+          .collection('assinaturas')
+          .doc(id)
+          .delete();
+
       _assinaturas.removeWhere((a) => a.id == id);
       _assinaturasController.add(_assinaturas);
       notifyListeners();
       return true;
     } catch (e) {
-      _erro = e.toString().replaceAll('Exception: ', '');
+      _erro = e.toString();
       notifyListeners();
       return false;
     }

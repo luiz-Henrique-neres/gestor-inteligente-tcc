@@ -18,7 +18,7 @@ class _CadastroPageState extends State<CadastroPage> {
   final _telefoneCtrl = TextEditingController();
   final _senhaCtrl = TextEditingController();
   final _confirmarCtrl = TextEditingController();
-  final bool _senhaVisivel = false;
+  bool _senhaVisivel = false;
 
   @override
   void dispose() {
@@ -147,30 +147,31 @@ class _CadastroPageState extends State<CadastroPage> {
 
   Widget _campoSenha(String label, TextEditingController ctrl,
       {String? Function(String?)? validator}) {
-    return StatefulBuilder(builder: (context, setState) {
-      bool visivel = false;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: ctrl,
-            obscureText: !visivel,
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                icon: Icon(visivel
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined),
-                onPressed: () => setState(() => visivel = !visivel),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: ctrl,
+          obscureText: !_senhaVisivel,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_senhaVisivel
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined),
+              onPressed: () {
+                setState(() {
+                  _senhaVisivel = !_senhaVisivel;
+                });
+              },
             ),
-            validator: validator,
           ),
-          const SizedBox(height: 16),
-        ],
-      );
-    });
+          validator: validator,
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 }
